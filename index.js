@@ -16,7 +16,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = 'mongodb://localhost:27017/realChat';
+const MONGO_URI = 'mongodb+srv://wizdevaxo06464:v6uG1vW3hujJqhDM@cluster0.7ojxpru.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 
 const upload = multer({ dest: 'uploads/' });  // Configure multer to save files to the 'uploads' folder
 
