@@ -36,7 +36,7 @@ mongoose.connect(MONGO_URI)
 
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
-app.use('/display', (req, res) => {
+app.use('/', (req, res) => {
   res.status(200).json({message: 'server running on port 300'})
 })
 
