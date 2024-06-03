@@ -16,7 +16,7 @@ const server = http.createServer(app);
 const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = MONGO_STRING
+const MONGO_URI = process.env.MONGO_STRING
 
 const upload = multer({ dest: 'uploads/' });  // Configure multer to save files to the 'uploads' folder
 
