@@ -1,60 +1,49 @@
 import express from 'express';
 import Message from '../models/Message.js';
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv'
+import { requireAuth } from '../middleware/authMiddleware.js';
 
-dotenv.config(); 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET_KEY;
 
-const authenticate = (req, res, next) => {
-  const token = req.headers['authorization'];
-  if (!token) {
-    console.log('No token provided');
-    return res.status(403).json({ message: 'No token provided' });
-  }
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) {
-      console.log('Failed to authenticate token:', err);
-      return res.status(500).json({ message: 'Failed to authenticate token' });
-    }
-    req.userId = decoded.id;
-    next();
-  });
-};
-
-router.get('/:receiver', authenticate, async (req, res) => {
+// Get messages between two users
+router.get('/:receiver', requireAuth, async (req, res) => {
   const { receiver } = req.params;
-  console.log('Get messages request:', { userId: req.userId, receiver });
+  console.log('receiver: ', receiver)
+  console.log('current user: ', req.user.userId)
   try {
     const messages = await Message.find({
       $or: [
-        { sender: req.userId, receiver },
-        { sender: receiver, receiver: req.userId },
+        { sender: req.user.userId, receiver },
+        { sender: receiver, receiver: req.user.userId },
       ],
-    }).sort('timestamp');
+    }).sort({ time: 1 }).lean(); // Use lean to avoid Mongoose document conversion
     res.json(messages);
-    console.log('Messages retrieved:', messages);
   } catch (error) {
-    console.error('Get messages error:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
-router.post('/', authenticate, async (req, res) => {
-  const { receiver, message } = req.body;
-  console.log('Post message request:', { sender: req.userId, receiver, message });
+// Send a message
+router.post('/', requireAuth, async (req, res) => {
+  const { receiver, message, imageUrl } = req.body;
+  console.log(req.body)
   try {
+    console.log(req.user)
+    console.log('before creatinn')
     const newMessage = new Message({
-      sender: req.userId,
+      sender: req.user.userId,
       receiver,
       message,
+      imageUrl: false,
+      time: new Date(),
+      read: false,
     });
+    console.log('before creatinn')
+
     await newMessage.save();
+    console.log('before await')
+
     res.status(201).json(newMessage);
-    console.log('Message sent:', newMessage);
   } catch (error) {
-    console.error('Post message error:', error);
     res.status(500).json({ message: error.message });
   }
 });

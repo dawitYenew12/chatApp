@@ -5,18 +5,23 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import multer from 'multer';
-import authRoutes from './routes/auth.js';
 import chatRoutes from './routes/chat.js';
+import { requireAuth, isAdmin } from './middleware/authMiddleware.js';
 import Message from './models/Message.js';
+import { userRouter } from './routes/userRoutes.js';
 
 dotenv.config();  // Load environment variables from .env file
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: '*',
+  },
+});
 
 const PORT = process.env.PORT || 3000;
-const MONGO_URI = process.env.MONGO_STRING
+const MONGO_URI = process.env.MONGO_STRING;
 
 const upload = multer({ dest: 'uploads/' });  // Configure multer to save files to the 'uploads' folder
 
@@ -24,22 +29,15 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));  // Serve uploaded files as static files
 
-// Simple request logger middleware
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  next();
-});
-
+// Mongoose connection with error handling
 mongoose.connect(MONGO_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch((error) => console.error('MongoDB connection error:', error));
 
-app.use('/api/auth', authRoutes);
-app.use('/api/chat', chatRoutes);
-app.use('/', (req, res) => {
-  res.status(200).json({message: 'server running on port 300'})
-})
+app.use("/api/users", userRouter);
+app.use('/api/chat', chatRoutes); // Ensure routes are correct
 
+// File upload endpoint
 app.post('/api/upload', upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).send('No file uploaded');
@@ -47,7 +45,8 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
   res.status(200).json({ imageUrl: `/uploads/${req.file.filename}` });
 });
 
-app.post('/api/readMessage', async (req, res) => {
+// Mark message as read endpoint
+app.post('/api/readMessage', requireAuth, async (req, res) => {
   const { messageId } = req.body;
 
   try {
@@ -58,6 +57,7 @@ app.post('/api/readMessage', async (req, res) => {
   }
 });
 
+// WebSocket connection
 io.on('connection', (socket) => {
   console.log('New client connected');
 
@@ -110,4 +110,5 @@ io.on('connection', (socket) => {
   });
 });
 
+// Server listening
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
